@@ -48,6 +48,11 @@ def schema(name: str, desc: str, props: dict, required: list[str]) -> dict:
 
 
 def build_tools() -> dict[str, ToolDef]:
+    # 置 LIVE_INJECT_FAILURE=1 时，承运商接口第一次调用超时，第二次成功。
+    # 用来观察：被拒之后模型是重试、改路，还是直接放弃。
+    inject_failure = os.environ.get("LIVE_INJECT_FAILURE") == "1"
+    attempts = {"n": 0}
+
     def get_order(order_id: str) -> dict:
         return {"order_id": order_id, "status": "shipped", "carrier": "中通"}
 
@@ -55,6 +60,9 @@ def build_tools() -> dict[str, ToolDef]:
         return {"order_id": order_id, "address": address, "ok": True}
 
     def create_carrier_change(order_id: str, carrier: str) -> dict:
+        attempts["n"] += 1
+        if inject_failure and attempts["n"] == 1:
+            raise TimeoutError("承运商改派接口超时 30s，可稍后重试")
         return {"order_id": order_id, "carrier": carrier, "ticket": "CC-88231-01"}
 
     return {
@@ -123,7 +131,10 @@ def main() -> int:
     for tool in build_tools().values():
         loop.register_tool(tool)
 
-    task = "订单 SO-88231 的收货地址要改到杭州西湖区，客户催得急，帮我看下能不能改。"
+    task = os.environ.get(
+        "LIVE_TASK",
+        "订单 SO-88231 的收货地址要改到杭州西湖区，客户催得急，帮我看下能不能改。",
+    )
     print("=" * 70)
     print(f"任务：{task}")
     print("=" * 70)
@@ -148,13 +159,24 @@ def main() -> int:
           f"（{result.verification.verdict.value if result.verification else ''}）")
     print(f"答案：{result.answer}")
 
+    # 障碍包括：工具报错、前置条件不满足、权限拒绝、没检索就调用。
+    # 只看 denied 会漏掉工具自己抛错的情况。
+    obstacles: list[str] = []
+    for message in result.messages:
+        if message["role"] != "tool":
+            continue
+        outcome = json.loads(message["content"]).get("outcome")
+        if outcome in ("error", "precondition_failed", "permission_denied", "not_loaded"):
+            obstacles.append(outcome)
+
     used_discover = "discover" in result.calls
     used_plan = bool(result.plan)
-    recovered = result.denied and result.answer and result.stopped.value == "none"
+    recovered = bool(obstacles) and bool(result.answer) and result.stopped.value == "none"
     print("\n三项观察：")
     print(f"  主动检索：{'是' if used_discover else '否'}")
     print(f"  维护计划：{'是' if used_plan else '否'}")
-    print(f"  被拒后改路：{'是' if recovered else '未发生或未恢复'}")
+    print(f"  遇到障碍：{obstacles or '无'}")
+    print(f"  障碍后恢复：{'是' if recovered else '否'}")
     return 0
 
 

@@ -66,6 +66,8 @@ python examples/live_demo.py
 
 需要 `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL`。接 opencode-go 这类网关时它要求 `x-opencode-session` 头，脚本会自己生成。
 
+置 `LIVE_INJECT_FAILURE=1` 可以让承运商接口第一次调用超时，用来观察模型遇到障碍之后是重试、改路还是放弃。
+
 ## 结构
 
 ```

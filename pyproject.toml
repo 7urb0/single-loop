@@ -1,0 +1,34 @@
+[project]
+name = "single-loop"
+version = "0.1.0"
+description = "A minimal single-loop agent: one model, one context window, progressive disclosure, mechanical gates."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Nuyuk25721" }]
+keywords = ["agent", "harness", "progressive-disclosure", "subagent", "context"]
+dependencies = []
+
+[project.optional-dependencies]
+openai = ["openai>=1.0"]
+dev = ["pytest>=8.0", "ruff>=0.8"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["single_loop"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["RUF001", "RUF002", "RUF003", "E501"]

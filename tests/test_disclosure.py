@@ -34,12 +34,24 @@ def make_registry() -> Registry:
     return reg
 
 
-def test_index_only_shows_kinds() -> None:
+def test_index_names_entries_but_not_bodies() -> None:
     text = Disclosure(make_registry()).index_text()
     assert "tool" in text and "skill" in text and "knowledge" in text
-    # 索引不含正文，也不含条目 id
-    assert "update_address" not in text
-    assert "退款审批" not in text
+    # 条目名要出现：模型搜不到自己不知道存在的东西
+    assert "update_address" in text
+    assert "refund-sop" in text
+    # 正文不能出现
+    assert "超过 3000 元" not in text
+    assert "2 小时内" not in text
+
+
+def test_index_falls_back_to_counts_when_too_many() -> None:
+    reg = Registry()
+    for i in range(Disclosure.MAX_INLINE + 5):
+        reg.add(AssetSpec(id=f"t{i:03d}", kind=AssetKind.TOOL, index=f"动作{i}"))
+    text = Disclosure(reg).index_text()
+    assert "条目较多" in text
+    assert "t000" not in text
 
 
 def test_search_hits_skill_by_chinese_bigram() -> None:

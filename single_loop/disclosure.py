@@ -38,14 +38,28 @@ class Disclosure:
         self.registry = registry
         self._loaded: set[str] = set()
 
+    # 一级索引里最多内联多少个条目名。超过就退化成只报数量，
+    # 因为索引本身常驻，条目太多会把它变成第二个正文层。
+    MAX_INLINE = 40
+
     def index_text(self) -> str:
-        """一级索引：常驻上下文的那一段，只放类别和数量。"""
-        counts = self.registry.kinds()
+        """一级索引：常驻上下文的那一段。
+
+        只报数量是不够的。模型搜不到自己不知道存在的东西，
+        所以条目有限时把名字列出来，让它至少知道有哪些能力。
+        """
         lines = ["可用资产（先检索再用，正文不会自动进入上下文）："]
         for kind in AssetKind:
-            n = counts.get(kind, 0)
-            if n:
-                lines.append(f"- {kind.value}：{n} 项")
+            specs = self.registry.all(kind)
+            if not specs:
+                continue
+            if len(specs) <= self.MAX_INLINE:
+                names = "、".join(s.id for s in specs)
+                lines.append(f"- {kind.value}（{len(specs)}）：{names}")
+            else:
+                lines.append(
+                    f"- {kind.value}：{len(specs)} 项，条目较多，请用 discover 检索"
+                )
         return "\n".join(lines)
 
     def catalog_text(self, kind: AssetKind | None = None) -> str:

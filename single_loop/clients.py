@@ -12,12 +12,23 @@ from .testing import RealModelBlocked, real_requests_blocked
 
 
 class OpenAICompatClient(Model):
-    """把 OpenAI 兼容协议适配成 Model 接口。"""
+    """把 OpenAI 兼容协议适配成 Model 接口。
 
-    def __init__(self, api_key: str, base_url: str, model: str) -> None:
+    extra_headers 用于需要额外路由头的网关。例如 opencode-go 要求
+    x-opencode-session，缺了会返回 400 而不是路由到模型。
+    """
+
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        model: str,
+        extra_headers: dict[str, str] | None = None,
+    ) -> None:
         self.api_key = api_key
         self.base_url = base_url
         self.model = model
+        self.extra_headers = dict(extra_headers or {})
         self._client = None
 
     def _ensure_client(self):
@@ -37,6 +48,7 @@ class OpenAICompatClient(Model):
             model=self.model,
             messages=messages,  # type: ignore[arg-type]
             tools=tools or None,
+            extra_headers=self.extra_headers or None,
         )
         message = response.choices[0].message
         calls: list[ToolCall] = []

@@ -56,6 +56,16 @@ result = loop.run("用户的请求")
 
 `openai` 是可选依赖：`pip install single-loop[openai]`。
 
+## 真实模型验证
+
+`examples/live_demo.py` 跑一条订单改地址的链路，观察三件事：模型会不会主动检索、会不会用 `update_plan` 维护计划、被拒之后会不会改路。
+
+```bash
+python examples/live_demo.py
+```
+
+需要 `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL`。接 opencode-go 这类网关时它要求 `x-opencode-session` 头，脚本会自己生成。
+
 ## 结构
 
 ```
